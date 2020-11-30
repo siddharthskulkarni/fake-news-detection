@@ -1,0 +1,4 @@
+{
+    "python.pythonPath": "d:\\projects\\final-year-project\\fake-news-detection\\venv\\Scripts\\python.exe",
+    "python.formatting.provider": "yapf"
+}
