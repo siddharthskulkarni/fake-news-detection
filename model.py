@@ -1,3 +1,4 @@
+from os import sep
 import pandas as pd
 import tensorflow as tf
 import tqdm
@@ -8,8 +9,12 @@ from nltk.corpus import stopwords
 from utils.utils import *
 from config import *
 import io
+import string
+import csv
 
 STOP_WORDS = set(stopwords.words('english'))
+PUNCTUATIONS = list(string.punctuation)
+DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 VOCAB = {}
 INVERSE_VOCAB = {}
 VOCAB_SIZE = 0
@@ -18,45 +23,63 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
 def read_data():
-    data = pd.read_csv(TRAIN, delimiter="\t", header=None)
-    # data.append(pd.read_csv(TEST, delimiter="\t", header=None))
-    data.dropna(axis=0, inplace=True)
+    data_train = pd.read_csv(TRAIN, quoting=csv.QUOTE_NONE, error_bad_lines=False, sep="\t", header=None)
+    data_test = pd.read_csv(TEST, quoting=csv.QUOTE_NONE, error_bad_lines=False, sep="\t", header=None)
+    # print(data.shape, data)
+    data = pd.concat([data_train, data_test], ignore_index=True)
+    # print(data)
+    # data.dropna(axis=0, inplace=True)
     data.drop([0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], axis=1, inplace=True)
     data.columns = [0, 1]
+    print(data)
     return data
 
 
 def combine_labels(data):
+    out_labels = io.open('./data/labels.tsv', 'w', encoding='utf-8')
     for i in range(len(data)):
         if data.iloc[i][0] in ["pants-fire", "false", "barely-true"]:
             data.iloc[i][0] = 0
         else:
             data.iloc[i][0] = 1
+        out_labels.write(str(data.iloc[i][0]) + "\n")
     return data
 
 
 def generate_vocabulary(data):
-    global VOCAB, INVERSE_VOCAB, VOCAB_SIZE
+    global VOCAB, INVERSE_VOCAB, VOCAB_SIZE, PUNCTUATIONS
     index = 1
     for i in range(len(data)):
-        for token in data.iloc[i][1].lower().split():
-            if token not in STOP_WORDS:
+        for token in data.iloc[i][1].lower().strip().split():
+            for j in range(len(PUNCTUATIONS)):
+                token = token.replace(PUNCTUATIONS[j], "")
+            for j in range(len(DIGITS)):
+                token = token.replace(DIGITS[j], "")
+            if token not in STOP_WORDS and token != "":
                 if token not in VOCAB:
+                    if token == "null": token = "nul"
                     VOCAB[token] = index
                     INVERSE_VOCAB[index] = token
                     index += 1
     VOCAB['<pad>'] = 0
     INVERSE_VOCAB[0] = '<pad>'
     VOCAB_SIZE = index
+    # print(VOCAB)
 
 
 def vectorize_sentences(data):
+    global PUNCTUATIONS
     sequences = []
     max_length = 0
     for i in range(len(data)):
         sentence = []
-        for token in data.iloc[i][1].lower().split():
-            if token not in STOP_WORDS:
+        for token in data.iloc[i][1].lower().strip().split():
+            for j in range(len(PUNCTUATIONS)):
+                token = token.replace(PUNCTUATIONS[j], "")
+            for j in range(len(DIGITS)):
+                token = token.replace(DIGITS[j], "")
+            if token not in STOP_WORDS and token != "":
+                if token == "null": token = "nul"
                 sentence.append(VOCAB[token])
         if max_length < len(sentence): max_length = len(sentence)
         sequences.append(sentence)
@@ -183,7 +206,7 @@ def save_word_vectors(word2vec):
     out_m = io.open('./data/metadata.tsv', 'w', encoding='utf-8')
 
     for index, word in enumerate(vocab):
-        if index == 0: continue  # skip 0, it's padding.
+        if word == '<pad>': continue  # skip 0, it's padding.
         vec = weights[index]
         out_v.write('\t'.join([str(x) for x in vec]) + "\n")
         out_m.write(word + "\n")
@@ -194,11 +217,11 @@ def save_word_vectors(word2vec):
 if __name__ == "__main__":
     data = read_data()
     data = combine_labels(data)
-    generate_vocabulary(data)
-    sequences = vectorize_sentences(data)
-    dataset = generate_training_examples(sequences)
-    word2vec = train_word2vec_model(dataset)
-    save_word_vectors(word2vec)
+    # generate_vocabulary(data)
+    # sequences = vectorize_sentences(data)
+    # dataset = generate_training_examples(sequences)
+    # word2vec = train_word2vec_model(dataset)
+    # save_word_vectors(word2vec)
     # print(data.head(), sequences[:2],
     #       list(VOCAB.items())[:4],
     #       list(INVERSE_VOCAB.items())[:4])

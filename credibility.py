@@ -2,13 +2,16 @@ import pandas as pd
 import pickle
 from utils.utils import return_label_weights
 from config import *
+import csv
 
 CREDIBILITY = {}
 
 
 def read_data():
-    data = pd.read_csv(TRAIN, delimiter="\t", header=None)
-    data.append(pd.read_csv(TEST, delimiter="\t", header=None))
+    data_train = pd.read_csv(TRAIN, quoting=csv.QUOTE_NONE, error_bad_lines=False, sep="\t", header=None)
+    data_test = pd.read_csv(TEST, quoting=csv.QUOTE_NONE, error_bad_lines=False, sep="\t", header=None)
+    # print(data.shape, data)
+    data = pd.concat([data_train, data_test], ignore_index=True)
     data.dropna(axis=0, inplace=True)
     data.drop([0, 2, 5, 6, 8, 9, 10, 11, 12, 13], axis=1, inplace=True)
     data.columns = [0, 1, 2, 3]
