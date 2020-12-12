@@ -10,6 +10,7 @@ import string
 from nltk.corpus import stopwords
 import csv
 import io
+import json
 
 STOP_WORDS = set(stopwords.words('english'))
 PUNCTUATIONS = list(string.punctuation)
@@ -100,19 +101,29 @@ def generate_input_vectors(sequences):
 def test_models(input_vectors, models):
     global LABELS_DF
     output = {}
+    output["combined"] = {
+        "tp": 0,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "acc": 0
+    }
     for key in models:
         output[key] = {
-            "tp": 0,
-            "tn": 0,
-            "fp": 0,
-            "fn": 0,
-            "acc": 0
-        }
-        # tp, tn, fp, fn = 0, 0, 0, 0
-        for i in range(N_TRAIN + 1, N_TOTAL):
-            train_tuple = input_vectors.iloc[i]
+                "tp": 0,
+                "tn": 0,
+                "fp": 0,
+                "fn": 0,
+                "acc": 0
+            }
+    # tp, tn, fp, fn = 0, 0, 0, 0
+    for i in range(N_TRAIN + 1, N_TOTAL):
+        train_tuple = input_vectors.iloc[i]
+        labelled_val = LABELS_DF.iloc[i][0]
+        tupple_class = 0
+        for key in models:
             predicted_val = models[key].predict([train_tuple])
-            labelled_val = LABELS_DF.iloc[i][0]
+            tupple_class += predicted_val
             # print(LogisticRegressionModel.predict([train_tuple]), LABELS_DF.iloc[i][0])
             if predicted_val == labelled_val:
                 if predicted_val == 0:
@@ -124,13 +135,31 @@ def test_models(input_vectors, models):
                     output[key]["fn"] += 1
                 else:
                     output[key]["fp"] += 1
+        if tupple_class < 2:
+            if labelled_val == 0:
+                output["combined"]["tp"] += 1
+            else:
+                output["combined"]["fp"] += 1
+        else:
+            if labelled_val == 1:
+                output["combined"]["tn"] += 1
+            else:
+                output["combined"]["fn"] += 1
+
+    # output[key]["acc"] = (output[key]["tp"] + output[key]["tn"]) / (output[key]["tp"] + output[key]["tn"] + output[key]["fp"] + output[key]["fn"])
+    # print("Model = ", key)
+    # print("TP    = ", output[key]["tp"])
+    # print("TN    = ", output[key]["tn"])
+    # print("FP    = ", output[key]["fp"])
+    # print("FN    = ", output[key]["fn"])
+    # print("ACC   = ", output[key]["acc"])
+    
+    for key in output:
         output[key]["acc"] = (output[key]["tp"] + output[key]["tn"]) / (output[key]["tp"] + output[key]["tn"] + output[key]["fp"] + output[key]["fn"])
-        print("Model = ", key)
-        print("TP    = ", output[key]["tp"])
-        print("TN    = ", output[key]["tn"])
-        print("FP    = ", output[key]["fp"])
-        print("FN    = ", output[key]["fn"])
-        print("ACC   = ", output[key]["acc"])
+    print(output)
+    with open("./data/output_word2vec.json", "w+") as f:
+        json.dump(output, f)
+    # json.dump("./data/output_word2vec.tsv")
 
 
 
@@ -143,7 +172,7 @@ def logistic_regression(X, y):
 def k_nearest_neighbours(X, y):
     # X = [[0], [1], [2], [3]]
     # y = [0, 0, 1, 1]
-    neigh = KNeighborsClassifier(n_neighbors=15)
+    neigh = KNeighborsClassifier(n_neighbors=5)
     neigh.fit(X, y)
     return neigh
     # neigh.fit(X, y)
@@ -172,5 +201,11 @@ if __name__ == "__main__":
     LogisticRegressionModel = logistic_regression(input_vectors[:N_TRAIN], LABELS_DF[:N_TRAIN][0])
     KNeighbours = k_nearest_neighbours(input_vectors[:N_TRAIN], LABELS_DF[:N_TRAIN][0])
     SupportVectorMachine = support_vector_machine(input_vectors[:N_TRAIN], LABELS_DF[:N_TRAIN][0])
+    # print("Testing...")
+    # test_models(input_vectors, {"logistic_regression": LogisticRegressionModel, "k_nearest_neighbours": KNeighbours, "support_vector_machine": SupportVectorMachine})
+    # print("Testing...2")
+    # LogisticRegressionModel = logistic_regression(TFIDF_VECTORS_DF[:N_TRAIN], LABELS_DF[:N_TRAIN][0])
+    # KNeighbours = k_nearest_neighbours(TFIDF_VECTORS_DF[:N_TRAIN], LABELS_DF[:N_TRAIN][0])
+    # SupportVectorMachine = support_vector_machine(TFIDF_VECTORS_DF[:N_TRAIN], LABELS_DF[:N_TRAIN][0])
     print("Testing...")
     test_models(input_vectors, {"logistic_regression": LogisticRegressionModel, "k_nearest_neighbours": KNeighbours, "support_vector_machine": SupportVectorMachine})

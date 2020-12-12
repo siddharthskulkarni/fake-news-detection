@@ -1,0 +1,1 @@
+{"combined": {"tp": 17, "tn": 700, "fp": 26, "fn": 539, "acc": 0.5592823712948518}, "logistic_regression": {"tp": 17, "tn": 700, "fp": 26, "fn": 539, "acc": 0.5592823712948518}, "k_nearest_neighbours": {"tp": 123, "tn": 574, "fp": 152, "fn": 433, "acc": 0.5436817472698908}, "support_vector_machine": {"tp": 17, "tn": 700, "fp": 26, "fn": 539, "acc": 0.5592823712948518}}

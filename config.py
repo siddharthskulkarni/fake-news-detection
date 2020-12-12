@@ -7,6 +7,7 @@ WORD_VECTORS = "./data/vectors.tsv"
 LABELS = "./data/labels.tsv"
 INPUT_VECTORS = "./data/input_vectors.tsv"
 WRITE_FILE = "./data/credibility_lookup.pickle"
+
 N_TEST = 1283
 N_TRAIN = 10269
 N_TOTAL = 11552
